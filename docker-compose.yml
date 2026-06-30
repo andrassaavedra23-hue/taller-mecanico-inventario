@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # -----------------------------------------------------
+  # CAJA 1: LA BASE DE DATOS (Con chequeo de salud)
+  # -----------------------------------------------------
+  db-inventario:
+    image: postgres:16-alpine
+    container_name: db_taller_mecanico
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    # NUEVO: Le decimos a Docker cómo verificar si Postgres está realmente vivo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------
+  # CAJA 2: TU APLICACIÓN JAVA
+  # -----------------------------------------------------
+  app-inventario:
+    build: .
+    container_name: api_taller_mecanico
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_PASSWORD: admin123
+    # NUEVO: No arranques HASTA que db-inventario pase su prueba de salud
+    depends_on:
+      db-inventario:
+        condition: service_healthy
+    # NUEVO: Si por algo falla al iniciar, que lo intente de nuevo automáticamente
+    restart: on-failure
